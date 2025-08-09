@@ -1,100 +1,60 @@
-"use client"
-
-import type React from "react"
-
-import { useState } from "react"
-import { useRouter } from "next/navigation"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Label } from "@/components/ui/label"
-import { Input } from "@/components/ui/input"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { IntroductionModal } from "@/components/shared/introduction-modal"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ShieldCheck, UserCircle2 } from "lucide-react"
 
-export default function LoginPage() {
-  const [username, setUsername] = useState("")
-  const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
-  const router = useRouter()
-
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (username === "gesildocraft" && password === "3360") {
-      localStorage.setItem("isLoggedIn", "true")
-      localStorage.setItem("userRole", "admin")
-      router.push("/dashboard")
-    } else {
-      setError("Usuário ou senha inválidos.")
-    }
-  }
-
-  const handleGuestLogin = () => {
-    localStorage.setItem("isLoggedIn", "true")
-    localStorage.setItem("userRole", "guest")
-    router.push("/dashboard")
-  }
-
+export default function Page() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100 dark:bg-gray-950 p-4">
-      <IntroductionModal />
-      <Card className="w-full max-w-md shadow-lg">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl">Entrar no Sistema</CardTitle>
-          <CardDescription>Selecione uma opção para continuar</CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4">
-          <div className="flex flex-col gap-2">
-            <Button
-              onClick={() => {
-                /* Logic to show login form */
-              }}
-              variant="outline"
-              className="w-full"
-            >
-              Entrar com conta
-            </Button>
-            <div className="relative my-4">
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
-              </div>
-              <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-muted-foreground">ou</span>
-              </div>
-            </div>
-            <Button onClick={handleGuestLogin} variant="secondary" className="w-full">
-              Entrar como visitante
-            </Button>
-          </div>
+    <main className="min-h-[100dvh] bg-muted/30">
+      <div className="max-w-5xl mx-auto px-4 py-12 md:py-20">
+        <header className="mb-10 text-center">
+          <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Gerenciador de Banco de Horas</h1>
+          <p className="text-muted-foreground mt-2">Acesse como Colaborador ou Administrador</p>
+        </header>
 
-          <form onSubmit={handleLogin} className="grid gap-4 mt-4">
-            <div className="grid gap-2">
-              <Label htmlFor="username">Usuário</Label>
-              <Input
-                id="username"
-                type="text"
-                placeholder="gesildocraft"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="password">Senha</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="3360"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-            </div>
-            {error && <p className="text-red-500 text-sm">{error}</p>}
-            <Button type="submit" className="w-full">
-              Login Administrador
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+        <div className="grid md:grid-cols-2 gap-6">
+          <Card className="border-2">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserCircle2 className="size-5" />
+                Painel do Colaborador
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Consulte seu saldo, detalhes das horas e histórico de atualizações.
+              </p>
+              <Link href="/colaborador">
+                <Button className="w-full">Acessar</Button>
+              </Link>
+            </CardContent>
+          </Card>
+
+          <Card className="border-2">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ShieldCheck className="size-5" />
+                Painel do Administrador
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Cadastre colaboradores e administradores, lance horas e gerencie permissões.
+              </p>
+              <Link href="/admin">
+                <Button variant="outline" className="w-full bg-transparent">
+                  Entrar
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
+
+        <footer className="mt-12 text-center text-xs text-muted-foreground">
+          Dica: Este protótipo usa verificações otimistas no cliente. Em produção, combine checagens otimistas
+          (UI/redirect) e seguras (próximas à fonte de dados).[^1]
+        </footer>
+      </div>
+    </main>
   )
 }
