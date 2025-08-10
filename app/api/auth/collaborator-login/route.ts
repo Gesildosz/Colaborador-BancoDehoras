@@ -1,20 +1,22 @@
 import { NextResponse } from "next/server"
-import { createSupabaseServer } from "@/lib/supabase/server"
+import { createServerClient } from "@/lib/server-supabase"
+import { createSession } from "@/lib/session"
 
-export async function POST(req: Request) {
-  const body = await req.json().catch(() => null)
-  const accessId = body?.accessId?.toString().trim()
-  if (!accessId || !/^\d{6,10}$/.test(accessId)) {
-    return new NextResponse("Código de Acesso inválido (6-10 números).", { status: 400 })
+export async function POST(request: Request) {
+  const { accessCode } = await request.json()
+  const supabase = createServerClient()
+
+  try {
+    const { data, error } = await supabase.from("collaborators").select("id").eq("access_code", accessCode).single()
+
+    if (error || !data) {
+      return NextResponse.json({ error: "Código de acesso inválido." }, { status: 401 })
+    }
+
+    await createSession(data.id, "collaborator")
+    return NextResponse.json({ message: "Login bem-sucedido." })
+  } catch (error: any) {
+    console.error("Erro no login do colaborador:", error.message)
+    return NextResponse.json({ error: "Erro interno do servidor." }, { status: 500 })
   }
-  const supabase = createSupabaseServer()
-  const { data, error } = await supabase
-    .from("collaborators")
-    .select("id_access")
-    .eq("id_access", accessId)
-    .limit(1)
-    .maybeSingle()
-  if (error) return new NextResponse(error.message, { status: 500 })
-  if (!data) return new NextResponse("Código de Acesso não encontrado.", { status: 404 })
-  return NextResponse.json({ ok: true })
 }

@@ -1,40 +1,54 @@
 import { NextResponse } from "next/server"
-import { createSupabaseServer } from "@/lib/supabase/server"
-import type { AdminSession } from "@/lib/types"
+import { createServerClient } from "@/lib/server-supabase"
+import { createSession } from "@/lib/session"
+import bcrypt from "bcrypt"
 
-export async function POST(req: Request) {
-  const body = await req.json().catch(() => null)
-  const usuario = body?.usuario?.toString().trim()
-  const senha = body?.senha?.toString()
+export async function POST(request: Request) {
+  const { username, password } = await request.json()
+  const supabase = createServerClient()
 
-  if (!usuario || !senha) {
-    return new NextResponse("Usuário e senha são obrigatórios.", { status: 400 })
+  // --- LOGS DE DEPURACAO ---
+  console.log("--- INICIANDO LOGIN ADMIN ---")
+  console.log("Tentativa de login para usuário:", username)
+  console.log("Senha recebida (CUIDADO: NÃO FAÇA ISSO EM PRODUÇÃO!):", password)
+  console.log("URL Supabase (do env):", process.env.NEXT_PUBLIC_SUPABASE_URL ? "Carregada" : "NÃO CARREGADA")
+  console.log("Service Role Key (do env):", process.env.SUPABASE_SERVICE_ROLE_KEY ? "Carregada" : "NÃO CARREGADA")
+  // --- FIM DOS LOGS DE DEPURACAO ---
+
+  try {
+    // Check against database for admins
+    const { data, error } = await supabase
+      .from("administrators")
+      .select("id, password_hash")
+      .eq("username", username)
+      .single()
+
+    // --- LOGS DE DEPURACAO ---
+    console.log("Dados do admin do DB (data):", data)
+    console.log("Erro do DB (error):", error)
+    console.log("Hash do DB:", data?.password_hash)
+    // --- FIM DOS LOGS DE DEPURACAO ---
+
+    if (error || !data) {
+      console.log("Usuário não encontrado ou erro no DB.")
+      return NextResponse.json({ error: "Usuário ou senha inválidos." }, { status: 401 })
+    }
+
+    const passwordMatch = await bcrypt.compare(password, data.password_hash)
+
+    // --- LOGS DE DEPURACAO ---
+    console.log("Resultado da comparação de senha (bcrypt.compare):", passwordMatch)
+    console.log("--- FIM LOGIN ADMIN ---")
+    // --- FIM DOS LOGS DE DEPURACAO ---
+
+    if (!passwordMatch) {
+      return NextResponse.json({ error: "Usuário ou senha inválidos." }, { status: 401 })
+    }
+
+    await createSession(data.id, "admin")
+    return NextResponse.json({ message: "Login bem-sucedido." })
+  } catch (error: any) {
+    console.error("Erro no login do administrador (catch):", error.message)
+    return NextResponse.json({ error: "Erro interno do servidor." }, { status: 500 })
   }
-
-  const supabase = createSupabaseServer()
-  const { data, error } = await supabase
-    .from("admins")
-    .select(
-      "usuario, senha, nome, cracha, perm_criar_colaborador, perm_criar_admin, perm_lancar_horas, perm_alterar_codigo",
-    )
-    .eq("usuario", usuario)
-    .limit(1)
-    .maybeSingle()
-
-  if (error) return new NextResponse(error.message, { status: 500 })
-  if (!data || data.senha !== senha) {
-    return new NextResponse("Credenciais inválidas.", { status: 401 })
-  }
-
-  const session: AdminSession = {
-    usuario: data.usuario,
-    perfilId: "master", // padrão ao logar; pode ser alternado na UI
-    permissoes: {
-      criarColaborador: !!data.perm_criar_colaborador,
-      criarAdmin: !!data.perm_criar_admin,
-      lancarHoras: !!data.perm_lancar_horas,
-      alterarCodigoAcesso: !!data.perm_alterar_codigo,
-    },
-  }
-  return NextResponse.json(session)
 }
